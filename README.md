@@ -131,10 +131,13 @@ The following make commands will do the trick:
 ```
 // deploy to test
 make deploy
+
 // deploy to stage
 make deploy-stage
+
 // deploy to live
 make deploy-live-definitely-stable
+
 // I'm not joking about that last one. The length is a deterrent.
 ```
 
@@ -153,3 +156,38 @@ go get
 ##Project Structure
 Design forthcoming.
 
+#Git Etiquitte
+We need this.
+
+##Using Git
+Learn how to use git on your own. Seriously, super useful stuff.
+
+##Branching
+If you want to make any sort of change to the code, ***CREATE A NEW BRANCH, AND DO NOT MAKE ANY CHANGES ON MASTER***. Just so we're clear on who's doing what and when, I'd like to use the following naming conventions for branches:
+```
+{type}/{handle}/{branch name}
+```
+
+The tree types of branches are as follows:
+- f : feature branch, created when making a new feature
+- b : bug branch, created when fixing/patching a bug
+- i : information, only used when changing the readme or adding non-code content (images, etc) to the project
+
+For example, creating this readme, I branched master into the following branch:
+
+i/beisner/readme_v1
+
+##Committing
+Every commit should build. It may fail tests, but please make it build. Also, this goes without saying, but descriptive messages, please.
+
+##Pull Requests
+When you think you're ready to merge with master, go to Github and create a pull request with master. Describe what changes you've made. ***DO NOT MERGE THE PULL REQUEST UNTIL YOU ASK A TEAMMATE TO LOOK AT YOUR CODE.*** This is very important. We all have the power to merge, but we should talk about merges and code quality before we make them with master.
+
+##Keeping Code Up To Date
+Please, try to pull from master at least every other day. When in your working branch, you can execute the following command to update the code in your branch:
+```
+git pull origin master
+```
+
+##Stable Branch
+We will also have a stable branch, which nobody should touch! This is the branch that is currently in production on live, so we know exactly what's running on our servers.
