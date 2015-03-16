@@ -154,7 +154,11 @@ go get
 ```
 
 ##Project Structure
-Design forthcoming.
+###Models
+- User
+    - thing
+- Item
+- 
 
 #Git Etiquitte
 We need this.
