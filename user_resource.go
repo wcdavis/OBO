@@ -2,9 +2,8 @@ package main
 
 import (
 	"github.com/emicklei/go-restful"
-	//"log"
+	"gopkg.in/mgo.v2/bson"
 	"net/http"
-	"strconv"
 )
 
 type UserResource struct {
@@ -21,16 +20,16 @@ func (u UserResource) Register(container *restful.Container) {
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
-	ws.Route(ws.GET("/{userId}").To(u.findUser).
+	ws.Route(ws.GET("/{user_id}").To(u.findUser).
 		Doc("find a user").
 		Operation("findUser").
-		Param(ws.PathParameter("userId", "identifier of the user").DataType("string")).
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes(User{})) // on the response
 
-	ws.Route(ws.PUT("/{userId}").To(u.updateUser).
+	ws.Route(ws.PUT("/{user_id}").To(u.updateUser).
 		Doc("update a user").
 		Operation("updateUser").
-		Param(ws.PathParameter("userId", "identifier of the user").DataType("string")).
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		ReturnsError(409, "duplicate userId", nil).
 		Reads(User{})) // from the request
 
@@ -39,10 +38,10 @@ func (u UserResource) Register(container *restful.Container) {
 		Operation("createUser").
 		Reads(User{})) // from the request
 
-	ws.Route(ws.DELETE("/{userId}").To(u.removeUser).
+	ws.Route(ws.DELETE("/{user_id}").To(u.removeUser).
 		Doc("delete a user").
 		Operation("deleteUser").
-		Param(ws.PathParameter("userId", "identifier of the user").DataType("string")).
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes(User{}))
 
 	container.Add(ws)
@@ -65,8 +64,8 @@ func (u *UserResource) createUser(request *restful.Request, response *restful.Re
 	if !success {
 		return
 	}
-	usr.Id = u.generateUserId()
-	u.storage.InsertUser(usr)
+
+	_, usr.Id = u.storage.InsertUser(usr)
 	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(usr)
 }
@@ -99,20 +98,20 @@ func (u *UserResource) removeUser(request *restful.Request, response *restful.Re
 //--------------------------------------------------------------------//
 // Utility Functions
 
-func (u *UserResource) checkUserId(request *restful.Request, response *restful.Response) (int, bool) {
+func (u *UserResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
 	success := true
+	idString := request.PathParameter("user_id")
 
-	id, err := strconv.Atoi(request.PathParameter("userId"))
-	if err != nil {
+	if !bson.IsObjectIdHex(idString) {
 		success = false
 		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusBadRequest, "Malformed userId.")
-	}
-	if !u.storage.ExistsUser(id) {
+		response.WriteErrorString(http.StatusNotFound, "Malformed user id.")
+	} else if !u.storage.ExistsUser(bson.ObjectIdHex(idString)) {
 		success = false
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusBadRequest, "User not found.")
 	}
+	id := bson.ObjectIdHex(idString)
 
 	return id, success
 }
@@ -130,8 +129,4 @@ func (u *UserResource) checkUser(request *restful.Request, response *restful.Res
 	}
 
 	return *usr, success
-}
-
-func (u *UserResource) generateUserId() int {
-	return u.storage.Length() + 1
 }

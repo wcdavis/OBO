@@ -1,6 +1,10 @@
 package main
 
-// we want to implement a generic-ish cache
+// generic cache for prototyping, don't really need this because
+// mongodb implements its own damn caching
+//
+// you're an idiot, Ben, for not knowing this before writing the code
+// -Ben
 type Cacheable interface {
 	GetId() int
 }
