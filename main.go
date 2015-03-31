@@ -8,47 +8,56 @@ import (
 
 	"gopkg.in/mgo.v2"
 	"net/http"
-	//"gopkg.in/mgo.v2/bson"
 )
+
+type Resource interface {
+	Register(*restful.Container)
+}
 
 func main() {
 
-	dbName := "obo"
-	url := "localhost"
+	// get configuration
+	configuration := getConfig()
 
 	// create a new web service container
 	wsContainer := restful.NewContainer()
 
 	// create database
-	session, err := mgo.Dial(url)
+	session, err := mgo.Dial(configuration.BaseURL)
 	if err != nil {
 		panic(err)
 	}
 	defer session.Close()
-
-	database := session.DB(dbName)
+	database := session.DB(configuration.DbName)
 
 	// create resources
-	userResource := UserResource{NewUserStorage(database)}
-	// itemResource := ItemResource{}
+	resources := createResources(database)
 
 	// register services
-	userResource.Register(wsContainer)
-	// itemResource.Register(wsContainer)
+	for _, resource := range resources {
+		resource.Register(wsContainer)
+	}
 
 	// configure swagger
 	config := swagger.Config{
 		WebServices:    wsContainer.RegisteredWebServices(), // you control what services are visible
-		WebServicesUrl: "http://localhost:4000",
-		ApiPath:        "/apidocs.json",
+		WebServicesUrl: "http://" + configuration.WebURL,
+		ApiPath:        configuration.ApiPath,
 
-		// Optionally, specifiy where the UI is located
-		SwaggerPath:     "/apidocs/",
-		SwaggerFilePath: "/Users/Ben/go/src/github.com/swagger/swagger-ui/dist"}
+		// Specifiy where the UI is located
+		SwaggerPath:     configuration.SwaggerPath,
+		SwaggerFilePath: configuration.SwaggerBaseURL}
 	swagger.RegisterSwaggerService(config, wsContainer)
 
-	log.Printf("start listening on localhost:4000")
-	server := &http.Server{Addr: ":4000", Handler: wsContainer}
+	log.Printf("start listening on " + configuration.WebURL)
+	server := &http.Server{Addr: ":" + configuration.Port, Handler: wsContainer}
 	log.Fatal(server.ListenAndServe())
 
+}
+
+func createResources(database *mgo.Database) []Resource {
+	var resources []Resource
+	resources = append(resources, UserResource{NewUserStorage(database)})
+	// resources[1] = ItemResource{}
+	return resources
 }

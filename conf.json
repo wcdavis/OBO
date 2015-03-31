@@ -1,0 +1,8 @@
+{
+	"DbName": "obo", 
+	"BaseURL": "localhost", 
+	"Port": "4001", 
+	"ApiPath": "/apidocs.json",
+	"SwaggerPath": "/apidocs/", 
+	"SwaggerBaseURL": "resources/swagger"
+}
