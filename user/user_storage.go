@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/beisner/OBO/util"
+	"github.com/PrincetonOBO/OBOBackend/util"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"

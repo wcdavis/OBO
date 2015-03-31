@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/beisner/OBO/user"
-	"github.com/beisner/OBO/util"
+	"github.com/PrincetonOBO/OBOBackend/user"
+	"github.com/PrincetonOBO/OBOBackend/util"
 
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
