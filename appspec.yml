@@ -7,25 +7,25 @@ files:
     destination: /etc/init
 hooks:
   ApplicationStop:
-    - location: scripts/stop_server.sh
+    - location: resources/scripts/stop_server.sh
       timeout: 60
       runas: root
 # During the BeforeInstall deployment lifecycle event, run the commands 
 #   in the script specified in "location".
   BeforeInstall:
-    - location: scripts/install_dependencies.sh
+    - location: resources/scripts/install_dependencies.sh
       timeout: 180
       runas: root
 # During the AfterInstall deployment lifecycle event, run the commands 
 #   in the script specified in "location".
   AfterInstall:
-    - location: scripts/build_server.sh
+    - location: resources/scripts/build_server.sh
       timeout: 1800
       runas: root
 # During the ApplicationInstall deployment lifecycle event, run the commands 
 #   in the script specified in "location".
   ApplicationStart:
-    - location: scripts/start_server.sh
+    - location: resources/scripts/start_server.sh
       timeout: 60
       runas: root
 # During the ValidateService deployment lifecycle event, run the commands 
