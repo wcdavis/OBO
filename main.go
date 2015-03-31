@@ -26,11 +26,14 @@ func main() {
 	wsContainer := restful.NewContainer()
 
 	// create database
-	session, err := mgo.Dial(configuration.BaseURL)
+	log.Print("Establishing connection with Mongo at " + configuration.DbBaseURL + "...")
+	session, err := mgo.Dial(configuration.DbBaseURL)
 	if err != nil {
 		panic(err)
 	}
 	defer session.Close()
+	log.Print("Connection established!")
+
 	database := session.DB(configuration.DbName)
 
 	// create resources

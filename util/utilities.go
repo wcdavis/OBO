@@ -8,7 +8,8 @@ import (
 
 type Configuration struct {
 	DbName         string
-	BaseURL        string
+	AppBaseURL     string
+	DbBaseURL      string
 	Port           string
 	ApiPath        string
 	WebURL         string
@@ -24,7 +25,7 @@ func Logerr(err error) {
 
 func GetConfig() Configuration {
 	defaultConfig := Configuration{DbName: "obo",
-		BaseURL: "localhost", Port: "80", ApiPath: "/apidocs.json",
+		AppBaseURL: "localhost", DbBaseURL: "localhost", Port: "4000", ApiPath: "/apidocs.json",
 		SwaggerPath: "/apidocs/", SwaggerBaseURL: "/swagger/dist"}
 
 	file, _ := os.Open("conf.json")
@@ -35,6 +36,7 @@ func GetConfig() Configuration {
 		log.Print("error parsing conf.json - using default values")
 		configuration = defaultConfig
 	}
-	configuration.WebURL = configuration.BaseURL + ":" + configuration.Port
+
+	configuration.WebURL = configuration.AppBaseURL + ":" + configuration.Port
 	return configuration
 }
