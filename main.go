@@ -3,6 +3,9 @@ package main
 import (
 	"log"
 
+	"github.com/beisner/OBO/user"
+	"github.com/beisner/OBO/util"
+
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
 
@@ -17,7 +20,7 @@ type Resource interface {
 func main() {
 
 	// get configuration
-	configuration := getConfig()
+	configuration := util.GetConfig()
 
 	// create a new web service container
 	wsContainer := restful.NewContainer()
@@ -57,7 +60,7 @@ func main() {
 
 func createResources(database *mgo.Database) []Resource {
 	var resources []Resource
-	resources = append(resources, UserResource{NewUserStorage(database)})
+	resources = append(resources, user.NewUserResource(database))
 	// resources[1] = ItemResource{}
 	return resources
 }

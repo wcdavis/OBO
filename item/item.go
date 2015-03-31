@@ -1,4 +1,4 @@
-package main
+package item
 
 type Item struct {
 	id          int

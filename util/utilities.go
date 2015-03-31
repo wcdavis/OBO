@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"encoding/json"
@@ -16,18 +16,13 @@ type Configuration struct {
 	SwaggerBaseURL string
 }
 
-type Configuration1 struct {
-	Users  []string
-	Groups []string
-}
-
-func logerr(err error) {
+func Logerr(err error) {
 	if err != nil {
 		log.Print(err)
 	}
 }
 
-func getConfig() Configuration {
+func GetConfig() Configuration {
 	defaultConfig := Configuration{DbName: "obo",
 		BaseURL: "localhost", Port: "80", ApiPath: "/apidocs.json",
 		SwaggerPath: "/apidocs/", SwaggerBaseURL: "/swagger/dist"}

@@ -1,13 +1,21 @@
-package main
+package user
 
 import (
 	"github.com/emicklei/go-restful"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
 	"net/http"
 )
 
 type UserResource struct {
 	storage *UserStorage
+}
+
+func NewUserResource(db *mgo.Database) *UserResource {
+	ur := new(UserResource)
+	ur.storage = newUserStorage(db)
+	return ur
 }
 
 // significant boilerplate for registration adapted from
