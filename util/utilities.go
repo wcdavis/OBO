@@ -2,8 +2,9 @@ package util
 
 import (
 	"encoding/json"
-	"log"
 	"os"
+
+	"github.com/emicklei/go-restful/log"
 )
 
 type Configuration struct {
@@ -28,13 +29,19 @@ func GetConfig() Configuration {
 		AppBaseURL: "localhost", DbBaseURL: "localhost", Port: "4000", ApiPath: "/apidocs.json",
 		SwaggerPath: "/apidocs/", SwaggerBaseURL: "/swagger/dist"}
 
-	file, _ := os.Open("conf.json")
-	decoder := json.NewDecoder(file)
-	configuration := Configuration{}
-	err := decoder.Decode(&configuration)
-	if err != nil {
-		log.Print("error parsing conf.json - using default values")
-		configuration = defaultConfig
+	configuration := defaultConfig
+
+	if len(os.Args) > 1 {
+		file, _ := os.Open(os.Args[1])
+		decoder := json.NewDecoder(file)
+		configuration = Configuration{}
+		err := decoder.Decode(&configuration)
+		if err != nil {
+			dir, _ := os.Getwd()
+			log.Print("error parsing " + os.Args[1] + " - using default values")
+			log.Print("pwd = " + dir)
+			configuration = defaultConfig
+		}
 	}
 
 	configuration.WebURL = configuration.AppBaseURL + ":" + configuration.Port

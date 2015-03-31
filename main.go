@@ -1,12 +1,11 @@
 package main
 
 import (
-	"log"
-
 	"github.com/PrincetonOBO/OBOBackend/user"
 	"github.com/PrincetonOBO/OBOBackend/util"
 
 	"github.com/emicklei/go-restful"
+	"github.com/emicklei/go-restful/log"
 	"github.com/emicklei/go-restful/swagger"
 
 	"gopkg.in/mgo.v2"
@@ -57,7 +56,7 @@ func main() {
 
 	log.Printf("start listening on " + configuration.WebURL)
 	server := &http.Server{Addr: ":" + configuration.Port, Handler: wsContainer}
-	log.Fatal(server.ListenAndServe())
+	log.Print(server.ListenAndServe())
 
 }
 
