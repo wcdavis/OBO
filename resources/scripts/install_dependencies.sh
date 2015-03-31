@@ -1,2 +1,2 @@
 # install go and git
-sudo yum install golang git
+sudo yum install golang git -y
