@@ -1,1 +1,1 @@
-sudo service OBOBackend start
+service OBOBackend start

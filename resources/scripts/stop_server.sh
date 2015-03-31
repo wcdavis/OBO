@@ -1,1 +1,1 @@
-sudo service OBOBackend stop
+service OBOBackend stop
