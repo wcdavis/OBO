@@ -1,1 +1,1 @@
-service OBOBackend start
+start OBOBackend

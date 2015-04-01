@@ -1,1 +1,1 @@
-service OBOBackend stop
+stop OBOBackend
