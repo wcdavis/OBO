@@ -1,13 +1,21 @@
-package main
+package user
 
 import (
 	"github.com/emicklei/go-restful"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
 	"net/http"
 )
 
 type UserResource struct {
 	storage *UserStorage
+}
+
+func NewUserResource(db *mgo.Database) *UserResource {
+	ur := new(UserResource)
+	ur.storage = newUserStorage(db)
+	return ur
 }
 
 // significant boilerplate for registration adapted from
@@ -30,7 +38,7 @@ func (u UserResource) Register(container *restful.Container) {
 		Doc("update a user").
 		Operation("updateUser").
 		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
-		ReturnsError(409, "duplicate userId", nil).
+		Returns(409, "duplicate userId", nil).
 		Reads(User{})) // from the request
 
 	ws.Route(ws.POST("").To(u.createUser).

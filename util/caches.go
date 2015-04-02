@@ -1,4 +1,4 @@
-package main
+package util
 
 // generic cache for prototyping, don't really need this because
 // mongodb implements its own damn caching

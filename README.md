@@ -156,9 +156,7 @@ go get
 ##Project Structure
 ###Models
 - User
-    - thing
 - Item
-- 
 
 #Git Etiquitte
 We need this.
