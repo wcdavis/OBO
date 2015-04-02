@@ -30,11 +30,11 @@ func main() {
 
 	// create resources
 	userResource := UserResource{NewUserStorage(database)}
-	// itemResource := ItemResource{}
+	itemResource := ItemResource{NewItemStorage(database)}
 
 	// register services
 	userResource.Register(wsContainer)
-	// itemResource.Register(wsContainer)
+	itemResource.Register(wsContainer)
 
 	// configure swagger
 	config := swagger.Config{
