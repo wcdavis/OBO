@@ -1,15 +1,18 @@
 package item
 
+import (
+	"gopkg.in/mgo.v2/bson"
+)
+
 type Item struct {
-	id          int
-	userId      int
-	description string
-	price       float64
-	longitude   float64
-	latitude    float64
+	Id          bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	Description string        `json:"description"`
+	price       float64       `json:"price"`
+	longitude   float64       `json:"longitude"`
+	latitude    float64       `json:"latitude"`
 }
 
 // implements Cacheable
-func (i Item) GetId() int {
-	return i.id
+func (i Item) GetId() bson.ObjectId {
+	return i.Id
 }

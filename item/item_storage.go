@@ -1,6 +1,7 @@
-package main
+package item
 
 import (
+	"github.com/PrincetonOBO/OBOBackend/util"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -20,36 +21,36 @@ func NewItemStorage(db *mgo.Database) *ItemStorage {
 
 func (is *ItemStorage) ExistsItem(id bson.ObjectId) bool {
 	n, err := is.col.FindId(id).Count()
-	logerr(err)
+	util.Logerr(err)
 	return n > 0
 }
 
-func (is *ItemStorage) GetItem(id bson.ObjectId) *User {
+func (is *ItemStorage) GetItem(id bson.ObjectId) *Item {
 	result := Item{}
-	logerr(is.col.FindId(id).One(&result))
+	util.Logerr(is.col.FindId(id).One(&result))
 	return &result
 }
 
 func (is *ItemStorage) InsertItem(item Item) (bool, bson.ObjectId) {
 	item.Id = bson.NewObjectId()
-	logerr(is.col.Insert(user))
+	util.Logerr(is.col.Insert(item))
 	return true, item.Id
 }
 
 func (is *ItemStorage) UpdateItem(item Item) bool {
-	logerr(is.col.UpdateId(item.Id, user))
+	util.Logerr(is.col.UpdateId(item.Id, item))
 	return true
 }
 
-func (is *UserStorage) DeleteUser(id bson.ObjectId) *User {
+func (is *ItemStorage) DeleteItem(id bson.ObjectId) *Item {
 	result := Item{}
-	logerr(is.col.FindId(id).One(&result))
-	logerr(is.col.RemoveId(id))
+	util.Logerr(is.col.FindId(id).One(&result))
+	util.Logerr(is.col.RemoveId(id))
 	return &result
 }
 
-func (is *UserStorage) Length() int {
+func (is *ItemStorage) Length() int {
 	n, err := is.col.Count()
-	logerr(err)
+	util.Logerr(err)
 	return n
 }

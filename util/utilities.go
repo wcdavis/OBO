@@ -2,8 +2,9 @@ package util
 
 import (
 	"encoding/json"
-	"log"
 	"os"
+
+	"github.com/emicklei/go-restful/log"
 )
 
 type Configuration struct {
@@ -37,6 +38,9 @@ func GetConfig() Configuration {
 		err := decoder.Decode(&configuration)
 		if err != nil {
 			log.Print("error parsing conf.json - using default values")
+			dir, _ := os.Getwd()
+			log.Print("error parsing " + os.Args[1] + " - using default values")
+			log.Print("pwd = " + dir)
 			configuration = defaultConfig
 		}
 	}

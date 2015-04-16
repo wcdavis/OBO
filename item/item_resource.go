@@ -1,13 +1,21 @@
-package main
+package item
 
 import (
 	"github.com/emicklei/go-restful"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
 	"net/http"
 )
 
 type ItemResource struct {
 	storage *ItemStorage
+}
+
+func NewItemResource(db *mgo.Database) *ItemResource {
+	ir := new(ItemResource)
+	ir.storage = NewItemStorage(db)
+	return ir
 }
 
 // significant boilerplate for registration adapted from
@@ -72,7 +80,7 @@ func (i *ItemResource) createItem(request *restful.Request, response *restful.Re
 
 func (i *ItemResource) updateItem(request *restful.Request, response *restful.Response) {
 	id, success1 := i.checkItemId(request, response)
-	item, success2 := i.checkUser(request, response)
+	item, success2 := i.checkItem(request, response)
 	if !success1 || !success2 {
 		return
 	}
