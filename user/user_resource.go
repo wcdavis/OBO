@@ -112,7 +112,7 @@ func (u *UserResource) checkUserId(request *restful.Request, response *restful.R
 
 	if !bson.IsObjectIdHex(idString) {
 		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusNotFound, "Malformed user id.")
+		response.WriteErrorString(http.StatusNotFound, "Malformed user_id.")
 		return bson.NewObjectId(), false
 	} else if !u.storage.ExistsUser(bson.ObjectIdHex(idString)) {
 		success = false
