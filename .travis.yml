@@ -1,0 +1,15 @@
+language: go
+go: tip
+deploy:
+  provider: codedeploy
+  access_key_id: AKIAJA3HDNURIV3UYKTA
+  secret_access_key:
+    secure: iBhQ9kF2IZ9XpeDeEqQ6hsUqc9JDM6YSFVsAUrMrlTZFAnGpSK4o3zyBPrkUE8xE0dLFKxTmS9r/gH6G0d+JdaNFSZ52cGVBzqX6JPHaR3OQtrnDx1iwGkBREt7YtzJPyJeZsZO2tOGkDL9pTckqZvLdOrRF+z1lW/CBTiH8TJA=
+  bucket: obo-test-bucket
+  region: us-west-2
+  revision_type: github
+  application: PrincetonOBO
+  deployment_group: obo-stage
+  on:
+    repo: PrincetonOBO/OBOBackend
+    branch: master
