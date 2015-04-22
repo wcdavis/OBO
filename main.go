@@ -65,5 +65,6 @@ func createResources(database *mgo.Database) []Resource {
 	var resources []Resource
 	resources = append(resources, user.NewUserResource(database))
 	resources = append(resources, item.NewItemResource(database))
+	resources = append(resources, item.NewUserItemResource(database))
 	return resources
 }

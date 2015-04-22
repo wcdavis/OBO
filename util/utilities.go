@@ -24,6 +24,10 @@ func Logerr(err error) {
 	}
 }
 
+func Log(s string) {
+	log.Print(s)
+}
+
 func GetConfig() Configuration {
 	defaultConfig := Configuration{DbName: "obo",
 		AppBaseURL: "localhost", DbBaseURL: "localhost", Port: "4000", ApiPath: "/apidocs.json",

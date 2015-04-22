@@ -6,15 +6,19 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
+
+	"github.com/PrincetonOBO/OBOBackend/item"
 )
 
 type UserResource struct {
-	storage *UserStorage
+	storage     *UserStorage
+	itemStorage *item.ItemStorage
 }
 
 func NewUserResource(db *mgo.Database) *UserResource {
 	ur := new(UserResource)
 	ur.storage = newUserStorage(db)
+	ur.itemStorage = item.NewItemStorage(db)
 	return ur
 }
 

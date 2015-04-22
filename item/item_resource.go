@@ -6,6 +6,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
+
+	"github.com/PrincetonOBO/OBOBackend/util"
+
+	"strconv"
 )
 
 type ItemResource struct {
@@ -28,29 +32,36 @@ func (i ItemResource) Register(container *restful.Container) {
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
+	ws.Route(ws.GET("/").To(i.getFeed).
+		Doc("Get a feed of items").
+		Operation("getFeed").
+		Param(ws.QueryParameter("longitude", "longitude for query").DataType("float64")).
+		Param(ws.QueryParameter("latitude", "longitude for query").DataType("float64")).
+		Param(ws.QueryParameter("number", "number of entries to return").DataType("int")).
+		Writes([]ItemPresenter{}))
+
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
 		Doc("Find an item").
 		Operation("findItem").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
-		Writes(Item{})) // on the response
+		Writes(ItemPresenter{})) // on the response
 
-	ws.Route(ws.PUT("/{item_id}").To(i.updateItem).
-		Doc("update an item").
-		Operation("updateItem").
+	ws.Route(ws.POST("/{item_id}/offer").To(i.postOffer).
+		Doc("post an offer").
+		Operation("newOffer").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
 		ReturnsError(409, "duplicate itemId", nil).
-		Reads(Item{})) // from the request
+		Reads(OfferPresenter{})) // from the request
 
-	ws.Route(ws.POST("").To(i.createItem).
-		Doc("create an item").
-		Operation("createItem").
-		Reads(Item{})) // from the request
+	ws.Route(ws.DELETE("/{item_id}/offer").To(i.deleteOffer).
+		Doc("delete an offer").
+		Operation("deleteOffer").
+		Writes(OfferPresenter{})) // from the request
 
-	ws.Route(ws.DELETE("/{item_id}").To(i.removeItem).
-		Doc("delete an item").
-		Operation("deleteItem").
-		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
-		Writes(Item{}))
+	ws.Route(ws.GET("/{item_id}/report").To(i.reportItem).
+		Doc("report an inappropriate item").
+		Operation("reportItem").
+		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")))
 
 	container.Add(ws)
 }
@@ -58,49 +69,98 @@ func (i ItemResource) Register(container *restful.Container) {
 //--------------------------------------------------------------------//
 // Request Functions
 
+func (i *ItemResource) getFeed(request *restful.Request, response *restful.Response) {
+	// this is where we would do the geo query, but right now we don't
+	long, e1 := strconv.ParseFloat(request.QueryParameter("longitude"), 64)
+	lat, e2 := strconv.ParseFloat(request.QueryParameter("latitude"), 64)
+	num, e3 := strconv.ParseFloat(request.QueryParameter("number"), 64)
+
+	if e1 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed longitude.")
+		return
+	}
+	if e2 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed latitude.")
+		return
+	}
+	if e3 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed number.")
+		return
+	}
+
+	response.WriteHeader(http.StatusAccepted)
+	response.WriteEntity([5]ItemPresenter{Id: bson.ObjectIdHex("5536a8dd66580e3d7e000001"),
+		Description: "here's another item",
+		Price:       55.1,
+		Longitude:   23.4,
+		Latitude:    42.3})
+
+}
 func (i *ItemResource) findItem(request *restful.Request, response *restful.Response) {
 	id, success := i.checkItemId(request, response)
 	if !success {
 		return
 	}
 	item := i.storage.GetItem(id)
-	response.WriteEntity(item)
+	response.WriteEntity(item.ToPresenter())
 }
 
-func (i *ItemResource) createItem(request *restful.Request, response *restful.Response) {
-	item, success := i.checkItem(request, response)
-	if !success {
-		return
-	}
-
-	_, item.Id = i.storage.InsertItem(item)
-	response.WriteHeader(http.StatusCreated)
-	response.WriteEntity(item)
-}
-
-func (i *ItemResource) updateItem(request *restful.Request, response *restful.Response) {
-	id, success1 := i.checkItemId(request, response)
-	item, success2 := i.checkItem(request, response)
+func (i *ItemResource) postOffer(request *restful.Request, response *restful.Response) {
+	offer, success1 := i.checkOffer(request, response)
+	id, success2 := i.checkItemId(request, response)
 	if !success1 || !success2 {
 		return
 	}
 
-	item.Id = id // make sure the id is consistent
+	// enforce that we already have one offer existing
 
+	item := i.storage.GetItem(id)
+	for i, o := range item.Offers {
+		if o.Item_Id == id {
+			response.AddHeader("Content-Type", "text/plain")
+			response.WriteErrorString(http.StatusBadRequest, "You've already made an offer.")
+			return
+		}
+	}
+	append(item.Offers, offer)
 	i.storage.UpdateItem(item)
 	response.WriteHeader(http.StatusCreated)
-	response.WriteEntity(item)
+	response.WriteEntity(offer.ToPresenter())
 }
 
-func (i *ItemResource) removeItem(request *restful.Request, response *restful.Response) {
-	id, success := i.checkItemId(request, response)
-	if !success {
+func (i *ItemResource) deleteOffer(request *restful.Request, response *restful.Response) {
+	id, success2 := i.checkItemId(request, response)
+	if !success2 {
 		return
 	}
 
-	item := i.storage.DeleteItem(id)
+	item := i.storage.GetItem(id)
+	var updatedOffers []Offer
+	var deletedOffer Offer
+	for i, o := range item.Offers {
+		if o.Item_Id != id {
+			append(updatedOffers, o)
+		} else {
+			deletedOffer = o
+		}
+	}
+	item.Offers = updatedOffers
+	i.storage.UpdateItem(item)
 	response.WriteHeader(http.StatusAccepted)
-	response.WriteEntity(item)
+	response.WriteEntity(offer.ToPresenter())
+}
+
+func (i *ItemResource) reportItem(request *restful.Request, response *restful.Response) {
+	id, success2 := i.checkItemId(request, response)
+	if !success2 {
+		return
+	}
+	util.Log(id.String() + " was reported as inappropriate")
+	response.WriteHeader(http.StatusAccepted)
+	response.WriteEntity(id.String() + " was reported as inappropriate")
 }
 
 //--------------------------------------------------------------------//
@@ -124,17 +184,18 @@ func (i *ItemResource) checkItemId(request *restful.Request, response *restful.R
 	return id, success
 }
 
-func (i *ItemResource) checkItem(request *restful.Request, response *restful.Response) (Item, bool) {
+func (i *ItemResource) checkOffer(request *restful.Request, response *restful.Response) (Offer, bool) {
 	success := true
 
-	item := new(Item)
-	err := request.ReadEntity(item)
+	offer := new(OfferPresenter)
+	err := request.ReadEntity(offer)
+	util.Logerr(err)
 
 	if err != nil {
 		success = false
 		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusNotFound, "Malformed item.")
+		response.WriteErrorString(http.StatusNotFound, "Malformed offer.")
 	}
 
-	return *item, success
+	return *(offer.ToOffer()), success
 }
