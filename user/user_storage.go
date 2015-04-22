@@ -13,7 +13,7 @@ type UserStorage struct {
 	col *mgo.Collection // collection right from mongo
 }
 
-func newUserStorage(db *mgo.Database) *UserStorage {
+func NewUserStorage(db *mgo.Database) *UserStorage {
 	us := new(UserStorage)
 	us.db = db
 	us.col = db.C("user")

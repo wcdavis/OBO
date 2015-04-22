@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/PrincetonOBO/OBOBackend/item"
 	"github.com/PrincetonOBO/OBOBackend/user"
 	"github.com/PrincetonOBO/OBOBackend/util"
 
@@ -63,6 +64,8 @@ func main() {
 func createResources(database *mgo.Database) []Resource {
 	var resources []Resource
 	resources = append(resources, user.NewUserResource(database))
-	// resources[1] = ItemResource{}
+	resources = append(resources, item.NewUserItemResource(database))
+	resources = append(resources, item.NewItemResource(database))
+
 	return resources
 }

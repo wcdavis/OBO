@@ -1,15 +1,42 @@
 package item
 
+import (
+	"gopkg.in/mgo.v2/bson"
+)
+
 type Item struct {
-	id          int
-	userId      int
-	description string
-	price       float64
-	longitude   float64
-	latitude    float64
+	Id          bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	User_Id     bson.ObjectId `json:"user_id"`
+	Description string        `json:"description"`
+	Price       float64       `json:"price"`
+	Offers      []Offer       `json:"offers"`
+	Longitude   float64       `json:"longitude"`
+	Latitude    float64       `json:"latitude"`
 }
 
-// implements Cacheable
-func (i Item) GetId() int {
-	return i.id
+type ItemPresenter struct {
+	Id          bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	Description string        `json:"description"`
+	Price       float64       `json:"price"`
+	Longitude   float64       `json:"longitude"`
+	Latitude    float64       `json:"latitude"`
 }
+
+func (i Item) ToPresenter() ItemPresenter {
+	return ItemPresenter{Id: i.Id, Description: i.Description,
+		Price: i.Price, Longitude: i.Longitude, Latitude: i.Latitude}
+}
+
+func (i *ItemPresenter) ToItem() Item {
+	return Item{Id: i.Id, Description: i.Description,
+		Price: i.Price, Longitude: i.Longitude, Latitude: i.Latitude}
+}
+
+/*
+func Present(items []Item) []ItemPresenter {
+	var result []ItemPresenter
+	for i, p := range items {
+		append(result, p.ToPresenter())
+	}
+	return result
+}*/

@@ -14,7 +14,7 @@ type UserResource struct {
 
 func NewUserResource(db *mgo.Database) *UserResource {
 	ur := new(UserResource)
-	ur.storage = newUserStorage(db)
+	ur.storage = NewUserStorage(db)
 	return ur
 }
 
@@ -23,7 +23,7 @@ func NewUserResource(db *mgo.Database) *UserResource {
 func (u UserResource) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		Path("/users").
+		Path("/manage/users").
 		Doc("Manage Users").
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)

@@ -24,6 +24,10 @@ func Logerr(err error) {
 	}
 }
 
+func Log(s string) {
+	log.Print(s)
+}
+
 func GetConfig() Configuration {
 	defaultConfig := Configuration{DbName: "obo",
 		AppBaseURL: "localhost", DbBaseURL: "localhost", Port: "4000", ApiPath: "/apidocs.json",
@@ -37,6 +41,7 @@ func GetConfig() Configuration {
 		configuration = Configuration{}
 		err := decoder.Decode(&configuration)
 		if err != nil {
+			log.Print("error parsing conf.json - using default values")
 			dir, _ := os.Getwd()
 			log.Print("error parsing " + os.Args[1] + " - using default values")
 			log.Print("pwd = " + dir)
