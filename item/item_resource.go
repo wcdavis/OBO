@@ -7,18 +7,21 @@ import (
 
 	"net/http"
 
+	"github.com/PrincetonOBO/OBOBackend/user"
 	"github.com/PrincetonOBO/OBOBackend/util"
 
 	"strconv"
 )
 
 type ItemResource struct {
-	storage *ItemStorage
+	storage     *ItemStorage
+	userStorage *user.UserStorage
 }
 
 func NewItemResource(db *mgo.Database) *ItemResource {
 	ir := new(ItemResource)
 	ir.storage = NewItemStorage(db)
+	ir.userStorage = user.NewUserStorage(db)
 	return ir
 }
 
@@ -28,7 +31,7 @@ func (i ItemResource) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
 		Path("/items").
-		Doc("Manage Items").
+		Doc("Interact with Items").
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
@@ -46,16 +49,20 @@ func (i ItemResource) Register(container *restful.Container) {
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
 		Writes(ItemPresenter{})) // on the response
 
-	ws.Route(ws.POST("/{item_id}/offer").To(i.postOffer).
+	ws.Route(ws.POST("/{item_id}/offer/users/{user_id}").To(i.postOffer).
 		Doc("post an offer").
 		Operation("newOffer").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
-		ReturnsError(409, "duplicate itemId", nil).
+		// may be replaced by user token
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Reads(OfferPresenter{})) // from the request
 
-	ws.Route(ws.DELETE("/{item_id}/offer").To(i.deleteOffer).
+	ws.Route(ws.DELETE("/{item_id}/offer/users/{user_id}").To(i.deleteOffer).
 		Doc("delete an offer").
 		Operation("deleteOffer").
+		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
+		// may be replaced
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes(OfferPresenter{})) // from the request
 
 	ws.Route(ws.GET("/{item_id}/report").To(i.reportItem).
@@ -92,11 +99,11 @@ func (i *ItemResource) getFeed(request *restful.Request, response *restful.Respo
 	}
 
 	response.WriteHeader(http.StatusAccepted)
-	response.WriteEntity([5]ItemPresenter{Id: bson.ObjectIdHex("5536a8dd66580e3d7e000001"),
+	response.WriteEntity([1]ItemPresenter{ItemPresenter{Id: bson.ObjectIdHex("5536a8dd66580e3d7e000001"),
 		Description: "here's another item",
-		Price:       55.1,
-		Longitude:   23.4,
-		Latitude:    42.3})
+		Price:       num,
+		Longitude:   long,
+		Latitude:    lat}})
 
 }
 func (i *ItemResource) findItem(request *restful.Request, response *restful.Response) {
@@ -111,46 +118,51 @@ func (i *ItemResource) findItem(request *restful.Request, response *restful.Resp
 func (i *ItemResource) postOffer(request *restful.Request, response *restful.Response) {
 	offer, success1 := i.checkOffer(request, response)
 	id, success2 := i.checkItemId(request, response)
-	if !success1 || !success2 {
+	uid, success3 := i.checkUserId(request, response)
+	if !success1 || !success2 || !success3 {
 		return
 	}
 
 	// enforce that we already have one offer existing
 
+	offer.User_Id = uid
+	offer.Item_Id = id
+
 	item := i.storage.GetItem(id)
-	for i, o := range item.Offers {
-		if o.Item_Id == id {
+	for _, o := range item.Offers {
+		if o.User_Id == uid {
 			response.AddHeader("Content-Type", "text/plain")
 			response.WriteErrorString(http.StatusBadRequest, "You've already made an offer.")
 			return
 		}
 	}
-	append(item.Offers, offer)
-	i.storage.UpdateItem(item)
+	item.Offers = append(item.Offers, offer)
+	i.storage.UpdateItem(*item)
 	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(offer.ToPresenter())
 }
 
 func (i *ItemResource) deleteOffer(request *restful.Request, response *restful.Response) {
 	id, success2 := i.checkItemId(request, response)
-	if !success2 {
+	uid, success3 := i.checkUserId(request, response)
+	if !success2 || !success3 {
 		return
 	}
 
 	item := i.storage.GetItem(id)
 	var updatedOffers []Offer
 	var deletedOffer Offer
-	for i, o := range item.Offers {
-		if o.Item_Id != id {
-			append(updatedOffers, o)
+	for _, o := range item.Offers {
+		if o.User_Id != uid {
+			updatedOffers = append(updatedOffers, o)
 		} else {
 			deletedOffer = o
 		}
 	}
 	item.Offers = updatedOffers
-	i.storage.UpdateItem(item)
+	i.storage.UpdateItem(*item)
 	response.WriteHeader(http.StatusAccepted)
-	response.WriteEntity(offer.ToPresenter())
+	response.WriteEntity(deletedOffer.ToPresenter())
 }
 
 func (i *ItemResource) reportItem(request *restful.Request, response *restful.Response) {
@@ -197,5 +209,23 @@ func (i *ItemResource) checkOffer(request *restful.Request, response *restful.Re
 		response.WriteErrorString(http.StatusNotFound, "Malformed offer.")
 	}
 
-	return *(offer.ToOffer()), success
+	return (offer.ToOffer()), success
+}
+
+func (i *ItemResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
+	success := true
+	idString := request.PathParameter("user_id")
+
+	if !bson.IsObjectIdHex(idString) {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed user_id.")
+		return bson.NewObjectId(), false
+	} else if !i.userStorage.ExistsUser(bson.ObjectIdHex(idString)) {
+		success = false
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusBadRequest, "User not found.")
+	}
+	id := bson.ObjectIdHex(idString)
+
+	return id, success
 }

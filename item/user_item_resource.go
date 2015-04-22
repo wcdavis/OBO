@@ -7,17 +7,20 @@ import (
 
 	"net/http"
 
+	"github.com/PrincetonOBO/OBOBackend/user"
 	"github.com/PrincetonOBO/OBOBackend/util"
 )
 
 type UserItemResource struct {
-	storage *ItemStorage
+	storage     *ItemStorage
+	userStorage *user.UserStorage
 }
 
-func NewUserItemResource(db *mgo.Database) *ItemResource {
-	ir := new(ItemResource)
-	ir.storage = NewItemStorage(db)
-	return ir
+func NewUserItemResource(db *mgo.Database) *UserItemResource {
+	uir := new(UserItemResource)
+	uir.storage = NewItemStorage(db)
+	uir.userStorage = user.NewUserStorage(db)
+	return uir
 }
 
 // significant boilerplate for registration adapted from
@@ -27,13 +30,13 @@ func (i UserItemResource) Register(container *restful.Container) {
 	ws.
 		Path("/users/{user_id}/items").
 		Doc("Manage a User's Items").
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
-	ws.Route(ws.GET("/").To(u.getUserItems).
+	ws.Route(ws.GET("/").To(i.getUserItems).
 		Doc("get a user's items").
 		Operation("getUserItems").
-		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes([]Item{}))
 
 	ws.Route(ws.POST("/").To(i.createItem).
@@ -43,7 +46,7 @@ func (i UserItemResource) Register(container *restful.Container) {
 
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
 		Doc("Find an item").
-		Operation("findItem").
+		Operation("findUserItem").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
 		Writes(Item{})) // on the response
 
@@ -51,7 +54,6 @@ func (i UserItemResource) Register(container *restful.Container) {
 		Doc("update an item").
 		Operation("updateItem").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
-		ReturnsError(409, "duplicate itemId", nil).
 		Reads(ItemPresenter{})) // from the request
 
 	ws.Route(ws.DELETE("/{item_id}").To(i.removeItem).
@@ -66,7 +68,7 @@ func (i UserItemResource) Register(container *restful.Container) {
 //--------------------------------------------------------------------//
 // Request Functions
 
-func (i *ItemResource) findItem(request *restful.Request, response *restful.Response) {
+func (i *UserItemResource) findItem(request *restful.Request, response *restful.Response) {
 	id, success1 := i.checkItemId(request, response)
 	uid, success2 := i.checkUserId(request, response)
 	if !success1 || !success2 {
@@ -80,7 +82,7 @@ func (i *ItemResource) findItem(request *restful.Request, response *restful.Resp
 	response.WriteEntity(item)
 }
 
-func (i *ItemResource) createItem(request *restful.Request, response *restful.Response) {
+func (i *UserItemResource) createItem(request *restful.Request, response *restful.Response) {
 	item, success1 := i.checkItem(request, response)
 	uid, success2 := i.checkUserId(request, response)
 	if !success1 || !success2 {
@@ -93,7 +95,7 @@ func (i *ItemResource) createItem(request *restful.Request, response *restful.Re
 	response.WriteEntity(item)
 }
 
-func (i *ItemResource) updateItem(request *restful.Request, response *restful.Response) {
+func (i *UserItemResource) updateItem(request *restful.Request, response *restful.Response) {
 	id, success1 := i.checkItemId(request, response)
 	item, success2 := i.checkItem(request, response)
 	uid, success3 := i.checkUserId(request, response)
@@ -104,7 +106,7 @@ func (i *ItemResource) updateItem(request *restful.Request, response *restful.Re
 	item.Id = id // make sure the id is consistent
 	storedItem := i.storage.GetItem(id)
 	if storedItem.Id != uid {
-		response.WriteError(http.StatusNotFound, "You don't own this item")
+		response.WriteErrorString(http.StatusNotFound, "You don't own this item")
 		return
 	}
 	i.storage.UpdateItem(item)
@@ -112,7 +114,7 @@ func (i *ItemResource) updateItem(request *restful.Request, response *restful.Re
 	response.WriteEntity(item)
 }
 
-func (i *ItemResource) removeItem(request *restful.Request, response *restful.Response) {
+func (i *UserItemResource) removeItem(request *restful.Request, response *restful.Response) {
 	id, success := i.checkItemId(request, response)
 	uid, success3 := i.checkUserId(request, response)
 	if !success || !success3 {
@@ -120,8 +122,8 @@ func (i *ItemResource) removeItem(request *restful.Request, response *restful.Re
 	}
 
 	storedItem := i.storage.GetItem(id)
-	if storedItem.Id != uid {
-		response.WriteError(http.StatusNotFound, "You don't own this item")
+	if storedItem.User_Id != uid {
+		response.WriteErrorString(http.StatusNotFound, "You don't own this item")
 		return
 	}
 
@@ -130,10 +132,22 @@ func (i *ItemResource) removeItem(request *restful.Request, response *restful.Re
 	response.WriteEntity(item)
 }
 
+func (i *UserItemResource) getUserItems(request *restful.Request, response *restful.Response) {
+	user_id, success := i.checkUserId(request, response)
+	if !success {
+		return
+	}
+
+	items := i.storage.GetItemsByUserId(user_id)
+
+	response.WriteHeader(http.StatusAccepted)
+	response.WriteEntity(items)
+}
+
 //--------------------------------------------------------------------//
 // Utility Functions
 
-func (i *ItemResource) checkItemId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
+func (i *UserItemResource) checkItemId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
 	success := true
 	idString := request.PathParameter("item_id")
 
@@ -151,7 +165,7 @@ func (i *ItemResource) checkItemId(request *restful.Request, response *restful.R
 	return id, success
 }
 
-func (i *ItemResource) checkItem(request *restful.Request, response *restful.Response) (Item, bool) {
+func (i *UserItemResource) checkItem(request *restful.Request, response *restful.Response) (Item, bool) {
 	success := true
 
 	itemPres := new(ItemPresenter)
@@ -164,12 +178,12 @@ func (i *ItemResource) checkItem(request *restful.Request, response *restful.Res
 		response.WriteErrorString(http.StatusNotFound, "Malformed item.")
 	}
 
-	item := &itemPres.ToItem()
+	item := itemPres.ToItem()
 
-	return *item, success
+	return item, success
 }
 
-func (u *UserResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
+func (i *UserItemResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
 	success := true
 	idString := request.PathParameter("user_id")
 
@@ -177,7 +191,7 @@ func (u *UserResource) checkUserId(request *restful.Request, response *restful.R
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusNotFound, "Malformed user_id.")
 		return bson.NewObjectId(), false
-	} else if !u.storage.ExistsUser(bson.ObjectIdHex(idString)) {
+	} else if !i.userStorage.ExistsUser(bson.ObjectIdHex(idString)) {
 		success = false
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusBadRequest, "User not found.")

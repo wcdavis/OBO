@@ -6,19 +6,15 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
-
-	"github.com/PrincetonOBO/OBOBackend/item"
 )
 
 type UserResource struct {
-	storage     *UserStorage
-	itemStorage *item.ItemStorage
+	storage *UserStorage
 }
 
 func NewUserResource(db *mgo.Database) *UserResource {
 	ur := new(UserResource)
-	ur.storage = newUserStorage(db)
-	ur.itemStorage = item.NewItemStorage(db)
+	ur.storage = NewUserStorage(db)
 	return ur
 }
 
@@ -27,7 +23,7 @@ func NewUserResource(db *mgo.Database) *UserResource {
 func (u UserResource) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		Path("/users").
+		Path("/manage/users").
 		Doc("Manage Users").
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)

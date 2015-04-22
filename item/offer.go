@@ -2,39 +2,35 @@ package item
 
 import (
 	"gopkg.in/mgo.v2/bson"
+
+	"github.com/PrincetonOBO/OBOBackend/user"
 )
 
 type Offer struct {
-	Item_Id   bson.ObjectId `json:"id" bson:"_id,omitempty"`
-	User_Id   bson.ObjectId `json:"user_id"`
-	Price     float64       `json:"price"`
-	FirstName string        `json:"first_name"`
-	LastName  string        `json:"last_name"`
-	NetId     string        `json:"net_id"`
+	Item_Id       bson.ObjectId      `json:"id" bson:"_id,omitempty"`
+	User_Id       bson.ObjectId      `json:"user_id"`
+	Price         float64            `json:"price"`
+	UserPresenter user.UserPresenter `json:"user"`
 }
 
 type OfferPresenter struct {
-	Item_Id   bson.ObjectId `json:"id" bson:"_id,omitempty"`
-	Price     float64       `json:"price"`
-	FirstName string        `json:"first_name"`
-	LastName  string        `json:"last_name"`
-	NetId     string        `json:"net_id"`
+	Price         float64            `json:"price"`
+	UserPresenter user.UserPresenter `json:"user"`
 }
 
 func (i Offer) ToPresenter() OfferPresenter {
-	return OfferPresenter{ItemId: i.Item_Id, Price: i.Price,
-		FirstName: i.FirstName, LastName: i.LastName, NetId: i.NetId}
+	return OfferPresenter{Price: i.Price,
+		UserPresenter: i.UserPresenter}
 }
 
 func (i OfferPresenter) ToOffer() Offer {
-	return Offer{ItemId: i.Item_Id, Price: i.Price,
-		FirstName: i.FirstName, LastName: i.LastName, NetId: i.NetId}
+	return Offer{Price: i.Price, UserPresenter: i.UserPresenter}
 }
 
 func Present(offers []Offer) []OfferPresenter {
 	var result []OfferPresenter
-	for i, p := range offers {
-		append(result, p.ToPresenter())
+	for _, p := range offers {
+		result = append(result, p.ToPresenter())
 	}
 	return result
 }
