@@ -37,6 +37,12 @@ func (is *ItemStorage) GetItemsByUserId(user_id bson.ObjectId) *[]Item {
 	return &result
 }
 
+func (is *ItemStorage) GetItemsByOffer(user_id bson.ObjectId) *[]Item {
+	result := []Item{}
+	util.Logerr(is.col.Find(bson.M{"offers": bson.M{"$elemMatch": bson.M{"user_id": user_id}}}).All(&result))
+	return &result
+}
+
 func (is *ItemStorage) InsertItem(item Item) (bool, bson.ObjectId) {
 	item.Id = bson.NewObjectId()
 	util.Logerr(is.col.Insert(item))

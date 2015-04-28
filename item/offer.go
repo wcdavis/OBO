@@ -27,7 +27,7 @@ func (i OfferPresenter) ToOffer() Offer {
 	return Offer{Price: i.Price, UserPresenter: i.UserPresenter}
 }
 
-func Present(offers []Offer) []OfferPresenter {
+func PresentOffer(offers []Offer) []OfferPresenter {
 	var result []OfferPresenter
 	for _, p := range offers {
 		result = append(result, p.ToPresenter())
