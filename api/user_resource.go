@@ -1,4 +1,4 @@
-package user
+package api
 
 import (
 	"github.com/emicklei/go-restful"
@@ -6,15 +6,22 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
+
+	. "github.com/PrincetonOBO/OBOBackend/item"
+	. "github.com/PrincetonOBO/OBOBackend/user"
 )
 
+//type User user.User
+
 type UserResource struct {
-	storage *UserStorage
+	storage     *UserStorage
+	itemStorage *ItemStorage
 }
 
 func NewUserResource(db *mgo.Database) *UserResource {
 	ur := new(UserResource)
 	ur.storage = NewUserStorage(db)
+	ur.itemStorage = NewItemStorage(db)
 	return ur
 }
 
@@ -51,6 +58,12 @@ func (u UserResource) Register(container *restful.Container) {
 		Operation("deleteUser").
 		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes(User{}))
+
+	ws.Route(ws.GET("/{user_id}/offers").To(u.getActiveOffers).
+		Doc("gets a user's active offers").
+		Operation("getOffers").
+		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
+		Writes([]ItemPresenter{}))
 
 	container.Add(ws)
 }
@@ -101,6 +114,17 @@ func (u *UserResource) removeUser(request *restful.Request, response *restful.Re
 	usr := u.storage.DeleteUser(id)
 	response.WriteHeader(http.StatusAccepted)
 	response.WriteEntity(usr)
+}
+
+func (u *UserResource) getActiveOffers(request *restful.Request, response *restful.Response) {
+	id, success := u.checkUserId(request, response)
+	if !success {
+		return
+	}
+	items := u.itemStorage.GetItemsByOffer(id)
+
+	response.WriteHeader(http.StatusAccepted)
+	response.WriteEntity(PresentWithOffer(*items, id))
 }
 
 //--------------------------------------------------------------------//

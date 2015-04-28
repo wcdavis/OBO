@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/PrincetonOBO/OBOBackend/item"
-	"github.com/PrincetonOBO/OBOBackend/user"
+	"github.com/PrincetonOBO/OBOBackend/api"
 	"github.com/PrincetonOBO/OBOBackend/util"
 
 	"github.com/emicklei/go-restful"
@@ -63,9 +62,9 @@ func main() {
 
 func createResources(database *mgo.Database) []Resource {
 	var resources []Resource
-	resources = append(resources, user.NewUserResource(database))
-	resources = append(resources, item.NewUserItemResource(database))
-	resources = append(resources, item.NewItemResource(database))
+	resources = append(resources, api.NewUserResource(database))
+	resources = append(resources, api.NewUserItemResource(database))
+	resources = append(resources, api.NewItemResource(database))
 
 	return resources
 }

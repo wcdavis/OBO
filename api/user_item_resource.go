@@ -1,4 +1,4 @@
-package item
+package api
 
 import (
 	"github.com/emicklei/go-restful"
@@ -7,19 +7,21 @@ import (
 
 	"net/http"
 
-	"github.com/PrincetonOBO/OBOBackend/user"
+	. "github.com/PrincetonOBO/OBOBackend/item"
+	. "github.com/PrincetonOBO/OBOBackend/user"
+
 	"github.com/PrincetonOBO/OBOBackend/util"
 )
 
 type UserItemResource struct {
 	storage     *ItemStorage
-	userStorage *user.UserStorage
+	userStorage *UserStorage
 }
 
 func NewUserItemResource(db *mgo.Database) *UserItemResource {
 	uir := new(UserItemResource)
 	uir.storage = NewItemStorage(db)
-	uir.userStorage = user.NewUserStorage(db)
+	uir.userStorage = NewUserStorage(db)
 	return uir
 }
 
