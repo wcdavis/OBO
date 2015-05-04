@@ -205,7 +205,7 @@ func (i *UserItemResource) checkItem(request *restful.Request, response *restful
 	err := request.ReadEntity(itemPres)
 	util.Logerr(err)
 
-	if err != nil {
+	if err != nil || itemPres.Location.Coordinates == nil {
 		success = false
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusNotFound, "Malformed item.")
