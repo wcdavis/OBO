@@ -41,7 +41,7 @@ func (i ItemResource) Register(container *restful.Container) {
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
 	ws.Route(ws.GET("/").To(i.getFeed).
-		Doc("Get a feed of items").
+		Doc("get a feed of items").
 		Operation("getFeed").
 		Param(ws.QueryParameter("longitude", "longitude for query").DataType("float64")).
 		Param(ws.QueryParameter("latitude", "longitude for query").DataType("float64")).
@@ -49,10 +49,17 @@ func (i ItemResource) Register(container *restful.Container) {
 		Writes([]ItemListPresenter{}))
 
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
-		Doc("Find an item").
+		Doc("find an item").
 		Operation("findItem").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
 		Writes(ItemPresenter{})) // on the response
+
+	ws.Route(ws.GET("/{item_id}/pic/{pic_id}").To(i.getPicture).
+		Doc("get a picture's item").
+		Operation("getPic").
+		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
+		Param(ws.PathParameter("pic_id", "identifier of the picture").DataType("string")).
+		Writes(ImagePresenter{})) // from the request
 
 	ws.Route(ws.POST("/{item_id}/offer/users/{user_id}").To(i.postOffer).
 		Doc("post an offer").
@@ -126,7 +133,33 @@ func (i *ItemResource) findItem(request *restful.Request, response *restful.Resp
 		return
 	}
 	item := i.storage.GetItem(id)
-	response.WriteEntity(item.ToPresenter())
+	ims := *i.imageStorage.GetImagesByItemId(id)
+	var ids []bson.ObjectId
+	for _, im := range ims {
+		ids = append(ids, im.Id)
+	}
+
+	pres := item.ToPresenter()
+	pres.Images = ids
+	response.WriteEntity(pres)
+}
+
+func (i *ItemResource) getPicture(request *restful.Request, response *restful.Response) {
+	imId, success1 := i.checkImageId(request, response)
+	itemId, success2 := i.checkItemId(request, response)
+
+	if !success1 || !success2 {
+		return
+	}
+
+	im := i.imageStorage.GetImage(imId)
+
+	if im.Item_Id != itemId {
+		return
+	}
+	response.WriteHeader(http.StatusAccepted)
+	response.WriteEntity(im.ToPresenter(FULL))
+
 }
 
 func (i *ItemResource) postOffer(request *restful.Request, response *restful.Response) {
@@ -134,7 +167,8 @@ func (i *ItemResource) postOffer(request *restful.Request, response *restful.Res
 	id, success2 := i.checkItemId(request, response)
 	uid, success3 := i.checkUserId(request, response)
 	if !success1 || !success2 || !success3 {
-		return
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusBadRequest, "Incorrect image id.")
 	}
 
 	// enforce that we already have one offer existing
@@ -224,6 +258,24 @@ func (i *ItemResource) checkOffer(request *restful.Request, response *restful.Re
 	}
 
 	return (offer.ToOffer()), success
+}
+
+func (i *ItemResource) checkImageId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
+	success := true
+	idString := request.PathParameter("pic_id")
+
+	if !bson.IsObjectIdHex(idString) {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed pic_id.")
+		return bson.NewObjectId(), false
+	} else if !i.imageStorage.ExistsImage(bson.ObjectIdHex(idString)) {
+		success = false
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusBadRequest, "Image not found.")
+	}
+	id := bson.ObjectIdHex(idString)
+
+	return id, success
 }
 
 func (i *ItemResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {

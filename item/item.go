@@ -13,6 +13,8 @@ type Item struct {
 	Price       float64       `json:"price"`
 	Offers      []Offer       `json:"offers"`
 	Location    GeoJson       `bson:"location" json:"location"`
+	Time        int64         `json:"time"`
+	Sold        bool          `json:"sold"`
 }
 
 type GeoJson struct {
@@ -21,11 +23,14 @@ type GeoJson struct {
 }
 
 type ItemPresenter struct {
-	Id          bson.ObjectId `json:"id" bson:"_id,omitempty"`
-	Description string        `json:"description"`
-	Price       float64       `json:"price"`
-	Offers      []Offer       `json:"offers"`
-	Location    GeoJson       `bson:"location" json:"location"`
+	Id          bson.ObjectId   `json:"id" bson:"_id,omitempty"`
+	Description string          `json:"description"`
+	Price       float64         `json:"price"`
+	Offers      []Offer         `json:"offers"`
+	Images      []bson.ObjectId `json:"images"`
+	Location    GeoJson         `bson:"location" json:"location"`
+	Time        int64           `json:"time"`
+	Sold        bool            `json:"sold"`
 }
 
 type ItemListPresenter struct {
@@ -34,21 +39,24 @@ type ItemListPresenter struct {
 	Price       float64        `json:"price"`
 	Thumbnail   ImagePresenter `json:"thumbnail"`
 	Location    GeoJson        `bson:"location" json:"location"`
+	Time        int64          `json:"time"`
+	Sold        bool           `json:"sold"`
 }
 
 func (i Item) ToPresenter() ItemPresenter {
 	return ItemPresenter{Id: i.Id, Description: i.Description,
-		Price: i.Price, Offers: nil, Location: i.Location}
+		Price: i.Price, Offers: nil, Images: nil, Location: i.Location, Time: i.Time,
+		Sold: i.Sold}
 }
 
 func (i Item) ToItemListPresenter(im ImagePresenter) ItemListPresenter {
 	return ItemListPresenter{Id: i.Id, Description: i.Description,
-		Price: i.Price, Thumbnail: im, Location: i.Location}
+		Price: i.Price, Thumbnail: im, Location: i.Location, Time: i.Time, Sold: i.Sold}
 }
 
 func (i Item) ToPresenterWithOffer(userId bson.ObjectId) ItemPresenter {
 	item := ItemPresenter{Id: i.Id, Description: i.Description,
-		Price: i.Price, Offers: nil, Location: i.Location}
+		Price: i.Price, Offers: nil, Location: i.Location, Time: i.Time, Sold: i.Sold}
 	for _, o := range i.Offers {
 		if o.User_Id == userId {
 			item.Offers = append(item.Offers, o)
