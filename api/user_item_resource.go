@@ -6,6 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
+	"time"
 
 	. "github.com/PrincetonOBO/OBOBackend/image"
 	. "github.com/PrincetonOBO/OBOBackend/item"
@@ -56,10 +57,17 @@ func (i UserItemResource) Register(container *restful.Container) {
 		Reads(ImagePresenter{})) // from the request
 
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
-		Doc("Find an item").
+		Doc("find an item").
 		Operation("findUserItem").
 		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
 		Writes(Item{})) // on the response
+
+	ws.Route(ws.GET("/{item_id}/offer/{offer_id}").To(i.acceptOffer).
+		Doc("accept an offer").
+		Operation("acceptOffer").
+		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
+		Param(ws.PathParameter("offer_id", "user-identifier of the offer").DataType("string")).
+		Writes(OfferPresenter{})) // on the response
 
 	ws.Route(ws.PUT("/{item_id}").To(i.updateItem).
 		Doc("update an item").
@@ -101,6 +109,7 @@ func (i *UserItemResource) createItem(request *restful.Request, response *restfu
 	}
 	item.User_Id = uid
 	item.Location.Type = "Point"
+	item.Time = time.Now().Unix()
 
 	_, item.Id = i.storage.InsertItem(item)
 	response.WriteHeader(http.StatusCreated)
@@ -145,6 +154,35 @@ func (i *UserItemResource) updateItem(request *restful.Request, response *restfu
 	i.storage.UpdateItem(item)
 	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(item)
+}
+
+func (i *UserItemResource) acceptOffer(request *restful.Request, response *restful.Response) {
+	id, success1 := i.checkItemId(request, response)
+	uid, success2 := i.checkUserId(request, response)
+	offId, success3 := i.checkOfferId(request, response)
+	if !success1 || !success2 || !success3 {
+		return
+	}
+
+	storedItem := i.storage.GetItem(id)
+	if storedItem.User_Id != uid {
+		response.WriteErrorString(http.StatusNotFound, "You don't own this item")
+		return
+	}
+
+	for _, off := range storedItem.Offers {
+		if off.User_Id == offId {
+			storedItem.Sold = true
+			i.storage.UpdateItem(*storedItem)
+			response.WriteHeader(http.StatusAccepted)
+			response.WriteEntity(off)
+			return
+		}
+	}
+
+	response.WriteErrorString(http.StatusNotFound, "No such offer exists")
+	return
+
 }
 
 func (i *UserItemResource) removeItem(request *restful.Request, response *restful.Response) {
@@ -246,6 +284,20 @@ func (i *UserItemResource) checkUserId(request *restful.Request, response *restf
 		success = false
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusBadRequest, "User not found.")
+	}
+	id := bson.ObjectIdHex(idString)
+
+	return id, success
+}
+
+func (i *UserItemResource) checkOfferId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
+	success := true
+	idString := request.PathParameter("offer_id")
+
+	if !bson.IsObjectIdHex(idString) {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed offer id.")
+		return bson.NewObjectId(), false
 	}
 	id := bson.ObjectIdHex(idString)
 
