@@ -46,7 +46,7 @@ func (i ItemResource) Register(container *restful.Container) {
 		Param(ws.QueryParameter("longitude", "longitude for query").DataType("float64")).
 		Param(ws.QueryParameter("latitude", "longitude for query").DataType("float64")).
 		Param(ws.QueryParameter("number", "number of entries to return").DataType("int")).
-		Writes([]ItemPresenter{}))
+		Writes([]ItemListPresenter{}))
 
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
 		Doc("Find an item").
