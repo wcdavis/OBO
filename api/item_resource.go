@@ -7,6 +7,7 @@ import (
 
 	"net/http"
 
+	. "github.com/PrincetonOBO/OBOBackend/image"
 	. "github.com/PrincetonOBO/OBOBackend/item"
 	. "github.com/PrincetonOBO/OBOBackend/user"
 
@@ -16,14 +17,16 @@ import (
 )
 
 type ItemResource struct {
-	storage     *ItemStorage
-	userStorage *UserStorage
+	storage      *ItemStorage
+	userStorage  *UserStorage
+	imageStorage *ImageStorage
 }
 
 func NewItemResource(db *mgo.Database) *ItemResource {
 	ir := new(ItemResource)
 	ir.storage = NewItemStorage(db)
 	ir.userStorage = NewUserStorage(db)
+	ir.imageStorage = NewImageStorage(db)
 	return ir
 }
 
@@ -82,7 +85,7 @@ func (i *ItemResource) getFeed(request *restful.Request, response *restful.Respo
 	// this is where we would do the geo query, but right now we don't
 	long, e1 := strconv.ParseFloat(request.QueryParameter("longitude"), 64)
 	lat, e2 := strconv.ParseFloat(request.QueryParameter("latitude"), 64)
-	num, e3 := strconv.ParseFloat(request.QueryParameter("number"), 64)
+	num, e3 := strconv.ParseInt(request.QueryParameter("number"), 10, 64)
 
 	if e1 != nil {
 		response.AddHeader("Content-Type", "text/plain")
@@ -100,12 +103,21 @@ func (i *ItemResource) getFeed(request *restful.Request, response *restful.Respo
 		return
 	}
 
+	res := i.storage.GetFeed(long, lat, int(num))
+	var procRes []ItemListPresenter
+
+	for _, r := range *res {
+		var im Image
+		ims := *i.imageStorage.GetImagesByItemId(r.Id)
+		if len(ims) != 0 {
+			im = ims[0]
+		} else {
+			im = Image{}
+		}
+		procRes = append(procRes, r.ToItemListPresenter(im.ToPresenter(THUMB)))
+	}
 	response.WriteHeader(http.StatusAccepted)
-	response.WriteEntity([1]ItemPresenter{ItemPresenter{Id: bson.ObjectIdHex("5536a8dd66580e3d7e000001"),
-		Description: "here's another item",
-		Price:       num,
-		Longitude:   long,
-		Latitude:    lat}})
+	response.WriteEntity(procRes)
 
 }
 func (i *ItemResource) findItem(request *restful.Request, response *restful.Response) {

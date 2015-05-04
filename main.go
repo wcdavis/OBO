@@ -2,14 +2,20 @@ package main
 
 import (
 	"github.com/PrincetonOBO/OBOBackend/api"
+	//myim "github.com/PrincetonOBO/OBOBackend/image"
 	"github.com/PrincetonOBO/OBOBackend/util"
 
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/log"
 	"github.com/emicklei/go-restful/swagger"
 
+	//"fmt"
 	"gopkg.in/mgo.v2"
+	//"gopkg.in/mgo.v2/bson"
+	//"image"
+	//"image/jpeg"
 	"net/http"
+	//"os"
 )
 
 type Resource interface {
@@ -17,7 +23,39 @@ type Resource interface {
 }
 
 func main() {
+	///// START TEST
+	/*
+		image.RegisterFormat("jpeg", "jpeg", jpeg.Decode, jpeg.DecodeConfig)
 
+		imgfile, err := os.Open("./test2.jpg")
+
+		if err != nil {
+			fmt.Println("img.jpg file not found!")
+			os.Exit(1)
+		}
+
+		defer imgfile.Close()
+
+		img, _, err := image.Decode(imgfile)
+
+		thisIm := myim.NewImage(img, bson.NewObjectId())
+		fmt.Println(thisIm.Thumbnail)
+
+		fmt.Println(img.At(10, 10))
+
+		bounds := img.Bounds()
+
+		fmt.Println(bounds)
+
+		canvas := image.NewAlpha(bounds)
+
+		// is this image opaque
+		op := canvas.Opaque()
+
+		fmt.Println(op)
+
+		/////// END
+	*/
 	// get configuration
 	configuration := util.GetConfig()
 

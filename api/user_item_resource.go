@@ -7,6 +7,7 @@ import (
 
 	"net/http"
 
+	. "github.com/PrincetonOBO/OBOBackend/image"
 	. "github.com/PrincetonOBO/OBOBackend/item"
 	. "github.com/PrincetonOBO/OBOBackend/user"
 
@@ -14,14 +15,16 @@ import (
 )
 
 type UserItemResource struct {
-	storage     *ItemStorage
-	userStorage *UserStorage
+	storage      *ItemStorage
+	userStorage  *UserStorage
+	imageStorage *ImageStorage
 }
 
 func NewUserItemResource(db *mgo.Database) *UserItemResource {
 	uir := new(UserItemResource)
 	uir.storage = NewItemStorage(db)
 	uir.userStorage = NewUserStorage(db)
+	uir.imageStorage = NewImageStorage(db)
 	return uir
 }
 
@@ -45,6 +48,12 @@ func (i UserItemResource) Register(container *restful.Container) {
 		Doc("create an item").
 		Operation("createItem").
 		Reads(ItemPresenter{})) // from the request
+
+	ws.Route(ws.POST("/{item_id}/pic").To(i.addPicture).
+		Doc("attach an item to the picture").
+		Operation("attachPic").
+		Param(ws.PathParameter("item_id", "identifier of the item").DataType("string")).
+		Reads(ImagePresenter{})) // from the request
 
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
 		Doc("Find an item").
@@ -91,10 +100,32 @@ func (i *UserItemResource) createItem(request *restful.Request, response *restfu
 		return
 	}
 	item.User_Id = uid
+	item.Location.Type = "Point"
 
 	_, item.Id = i.storage.InsertItem(item)
 	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(item)
+}
+
+func (i *UserItemResource) addPicture(request *restful.Request, response *restful.Response) {
+	im, success1 := i.checkImage(request, response)
+	id, success2 := i.checkItemId(request, response)
+	uid, success3 := i.checkUserId(request, response)
+
+	if !success1 || !success2 || !success3 {
+		return
+	}
+
+	item := i.storage.GetItem(id)
+	if item.User_Id != uid {
+		response.WriteErrorString(http.StatusNotFound, "User doesn't own item")
+		return
+	}
+
+	i.imageStorage.InsertImage(im)
+	response.WriteHeader(http.StatusCreated)
+	response.WriteEntity(im.ToPresenter(THUMB))
+
 }
 
 func (i *UserItemResource) updateItem(request *restful.Request, response *restful.Response) {
@@ -183,6 +214,24 @@ func (i *UserItemResource) checkItem(request *restful.Request, response *restful
 	item := itemPres.ToItem()
 
 	return item, success
+}
+
+func (i *UserItemResource) checkImage(request *restful.Request, response *restful.Response) (Image, bool) {
+	success := true
+
+	imagePres := new(ImagePresenter)
+	err := request.ReadEntity(imagePres)
+	util.Logerr(err)
+
+	if err != nil {
+		success = false
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed image.")
+	}
+
+	im := imagePres.ToImage()
+
+	return im, success
 }
 
 func (i *UserItemResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
