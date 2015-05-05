@@ -9,12 +9,12 @@ import (
 type Offer struct {
 	Item_Id       bson.ObjectId      `json:"id" bson:"_id,omitempty"`
 	User_Id       bson.ObjectId      `json:"user_id"`
-	Price         float64            `json:"price"`
+	Price         int                `json:"price"`
 	UserPresenter user.UserPresenter `json:"user"`
 }
 
 type OfferPresenter struct {
-	Price         float64            `json:"price"`
+	Price         int                `json:"price"`
 	UserPresenter user.UserPresenter `json:"user"`
 }
 
