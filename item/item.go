@@ -9,6 +9,7 @@ import (
 type Item struct {
 	Id          bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	User_Id     bson.ObjectId `json:"user_id"`
+	Title       string        `json:"title"`
 	Description string        `json:"description"`
 	Price       float64       `json:"price"`
 	Offers      []Offer       `json:"offers"`
@@ -24,6 +25,7 @@ type GeoJson struct {
 
 type ItemPresenter struct {
 	Id          bson.ObjectId   `json:"id" bson:"_id,omitempty"`
+	Title       string          `json:"title"`
 	Description string          `json:"description"`
 	Price       float64         `json:"price"`
 	Offers      []Offer         `json:"offers"`
@@ -35,6 +37,7 @@ type ItemPresenter struct {
 
 type ItemListPresenter struct {
 	Id          bson.ObjectId  `json:"id" bson:"_id,omitempty"`
+	Title       string         `json:"title"`
 	Description string         `json:"description"`
 	Price       float64        `json:"price"`
 	Thumbnail   ImagePresenter `json:"thumbnail"`
@@ -44,18 +47,18 @@ type ItemListPresenter struct {
 }
 
 func (i Item) ToPresenter() ItemPresenter {
-	return ItemPresenter{Id: i.Id, Description: i.Description,
+	return ItemPresenter{Id: i.Id, Title: i.Title, Description: i.Description,
 		Price: i.Price, Offers: nil, Images: nil, Location: i.Location, Time: i.Time,
 		Sold: i.Sold}
 }
 
 func (i Item) ToItemListPresenter(im ImagePresenter) ItemListPresenter {
-	return ItemListPresenter{Id: i.Id, Description: i.Description,
+	return ItemListPresenter{Id: i.Id, Description: i.Description, Title: i.Title,
 		Price: i.Price, Thumbnail: im, Location: i.Location, Time: i.Time, Sold: i.Sold}
 }
 
 func (i Item) ToPresenterWithOffer(userId bson.ObjectId) ItemPresenter {
-	item := ItemPresenter{Id: i.Id, Description: i.Description,
+	item := ItemPresenter{Id: i.Id, Description: i.Description, Title: i.Title,
 		Price: i.Price, Offers: nil, Location: i.Location, Time: i.Time, Sold: i.Sold}
 	for _, o := range i.Offers {
 		if o.User_Id == userId {
@@ -66,7 +69,7 @@ func (i Item) ToPresenterWithOffer(userId bson.ObjectId) ItemPresenter {
 }
 
 func (i *ItemPresenter) ToItem() Item {
-	return Item{Id: i.Id, Description: i.Description,
+	return Item{Id: i.Id, Description: i.Description, Title: i.Title,
 		Price: i.Price, Location: i.Location}
 }
 
