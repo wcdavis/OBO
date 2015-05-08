@@ -48,6 +48,15 @@ func (i ItemResource) Register(container *restful.Container) {
 		Param(ws.QueryParameter("number", "number of entries to return").DataType("int")).
 		Writes([]ItemListPresenter{}))
 
+	ws.Route(ws.GET("/search").To(i.search).
+		Doc("get a feed of items").
+		Operation("getFeed").
+		Param(ws.QueryParameter("longitude", "longitude for query").DataType("float64")).
+		Param(ws.QueryParameter("latitude", "longitude for query").DataType("float64")).
+		Param(ws.QueryParameter("number", "number of entries to return").DataType("int")).
+		Param(ws.QueryParameter("search_term", "what to search by").DataType("string")).
+		Writes([]ItemListPresenter{}))
+
 	ws.Route(ws.GET("/{item_id}").To(i.findItem).
 		Doc("find an item").
 		Operation("findItem").
@@ -127,6 +136,48 @@ func (i *ItemResource) getFeed(request *restful.Request, response *restful.Respo
 	response.WriteEntity(procRes)
 
 }
+
+func (i *ItemResource) search(request *restful.Request, response *restful.Response) {
+	// this is where we would do the geo query, but right now we don't
+	long, e1 := strconv.ParseFloat(request.QueryParameter("longitude"), 64)
+	lat, e2 := strconv.ParseFloat(request.QueryParameter("latitude"), 64)
+	num, e3 := strconv.ParseInt(request.QueryParameter("number"), 10, 64)
+	search := request.QueryParameter("search_term")
+
+	if e1 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed longitude.")
+		return
+	}
+	if e2 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed latitude.")
+		return
+	}
+	if e3 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusNotFound, "Malformed number.")
+		return
+	}
+
+	res := i.storage.SearchItems(search, long, lat, int(num))
+	var procRes []ItemListPresenter
+
+	for _, r := range *res {
+		var im Image
+		ims := *i.imageStorage.GetImagesByItemId(r.Id)
+		if len(ims) != 0 {
+			im = ims[0]
+		} else {
+			im = Image{}
+		}
+		procRes = append(procRes, r.ToItemListPresenter(im.ToPresenter(THUMB)))
+	}
+	response.WriteHeader(http.StatusAccepted)
+	response.WriteEntity(procRes)
+
+}
+
 func (i *ItemResource) findItem(request *restful.Request, response *restful.Response) {
 	id, success := i.checkItemId(request, response)
 	if !success {

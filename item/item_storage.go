@@ -17,9 +17,12 @@ func NewItemStorage(db *mgo.Database) *ItemStorage {
 	is.db = db
 	is.col = db.C("item")
 
-	index := mgo.Index{Key: []string{"$2dsphere:location"}}
+	locIndex := mgo.Index{Key: []string{"$2dsphere:location"}}
+	//textIndex := mgo.Index{Key: []string{"$text:title", "$text:description"}}
 
-	util.Logerr(is.col.EnsureIndex(index))
+	util.Logerr(is.col.EnsureIndex(locIndex))
+	//util.Logerr(is.col.EnsureIndex(textIndex))
+	util.Logerr(is.col.EnsureIndexKey("title", "description"))
 	return is
 }
 
@@ -55,6 +58,22 @@ func (is *ItemStorage) GetFeed(long float64, lat float64, num int) *[]Item {
 			},
 		},
 	}).Sort("-_id").Limit(num).All(&result)
+	util.Logerr(err)
+	return &result
+}
+
+func (is *ItemStorage) SearchItems(search string, long float64, lat float64, num int) *[]Item {
+	//scope := 1.0
+	result := []Item{}
+	err := is.col.Find(bson.M{
+		/*		"location": bson.M{
+					"$geoWithin": bson.M{
+						"$centerSphere": {[]float64{long, lat}, scope / 6378.1},
+					},
+				},
+		*/
+		"$text": bson.M{"$search": search},
+	}).Limit(num).All(&result)
 	util.Logerr(err)
 	return &result
 }
