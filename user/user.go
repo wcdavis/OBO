@@ -9,6 +9,7 @@ type User struct {
 	Name           string        `json:"name"`
 	NetId          string        `json:"net_id"`
 	PickupLocation string        `json:"pickup_loc"`
+	Authentication string        `json:"authentication"`
 }
 
 type UserPresenter struct {

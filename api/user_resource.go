@@ -9,6 +9,8 @@ import (
 
 	. "github.com/PrincetonOBO/OBOBackend/item"
 	. "github.com/PrincetonOBO/OBOBackend/user"
+
+	"github.com/PrincetonOBO/OBOBackend/validate"
 )
 
 //type User user.User
@@ -16,12 +18,14 @@ import (
 type UserResource struct {
 	storage     *UserStorage
 	itemStorage *ItemStorage
+	validator   *validate.Validator
 }
 
 func NewUserResource(db *mgo.Database) *UserResource {
 	ur := new(UserResource)
 	ur.storage = NewUserStorage(db)
 	ur.itemStorage = NewItemStorage(db)
+	ur.validator = validate.NewValidator(db)
 	return ur
 }
 
@@ -35,31 +39,46 @@ func (u UserResource) Register(container *restful.Container) {
 		Consumes(restful.MIME_XML, restful.MIME_JSON).
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
-	ws.Route(ws.GET("/{user_id}").To(u.findUser).
+	ws.Route(ws.GET("/{user_id}").
+		Filter(u.validator.Authenticate).
+		Filter(u.validator.CheckUserId).
+		To(u.findUser).
 		Doc("find a user").
 		Operation("findUser").
 		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes(User{})) // on the response
 
-	ws.Route(ws.PUT("/{user_id}").To(u.updateUser).
+	ws.Route(ws.PUT("/{user_id}").
+		Filter(u.validator.Authenticate).
+		Filter(u.validator.CheckUserId).
+		Filter(u.validator.CheckUser).
+		To(u.updateUser).
 		Doc("update a user").
 		Operation("updateUser").
 		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Returns(409, "duplicate userId", nil).
 		Reads(User{})) // from the request
 
-	ws.Route(ws.POST("").To(u.createUser).
+	ws.Route(ws.POST("").
+		Filter(u.validator.CheckUser).
+		To(u.createUser).
 		Doc("create a user").
 		Operation("createUser").
 		Reads(User{})) // from the request
 
-	ws.Route(ws.DELETE("/{user_id}").To(u.removeUser).
+	ws.Route(ws.DELETE("/{user_id}").
+		Filter(u.validator.Authenticate).
+		Filter(u.validator.CheckUserId).
+		To(u.removeUser).
 		Doc("delete a user").
 		Operation("deleteUser").
 		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
 		Writes(User{}))
 
-	ws.Route(ws.GET("/{user_id}/offers").To(u.getActiveOffers).
+	ws.Route(ws.GET("/{user_id}/offers").
+		Filter(u.validator.Authenticate).
+		Filter(u.validator.CheckUserId).
+		To(u.getActiveOffers).
 		Doc("gets a user's active offers").
 		Operation("getOffers").
 		Param(ws.PathParameter("user_id", "identifier of the user").DataType("string")).
@@ -72,44 +91,37 @@ func (u UserResource) Register(container *restful.Container) {
 // Request Functions
 
 func (u *UserResource) findUser(request *restful.Request, response *restful.Response) {
-	id, success := u.checkUserId(request, response)
-	if !success {
-		return
-	}
+	id := bson.ObjectIdHex(request.PathParameter("user_id"))
 	usr := u.storage.GetUser(id)
 	response.WriteEntity(usr)
 }
 
 func (u *UserResource) createUser(request *restful.Request, response *restful.Response) {
-	usr, success := u.checkUser(request, response)
-	if !success {
-		return
-	}
+	usr := new(User)
+	request.ReadEntity(usr)
 
-	_, usr.Id = u.storage.InsertUser(usr)
+	_, usr.Id = u.storage.InsertUser(*usr)
+	usr.Authentication = u.validator.CreateAuthenticatedToken(*usr)
+
+	u.storage.UpdateUser(*usr)
 	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(usr)
 }
 
 func (u *UserResource) updateUser(request *restful.Request, response *restful.Response) {
-	id, success1 := u.checkUserId(request, response)
-	usr, success2 := u.checkUser(request, response)
-	if !success1 || !success2 {
-		return
-	}
+	id := bson.ObjectIdHex(request.PathParameter("user_id"))
+	usr := new(User)
+	request.ReadEntity(usr)
 
 	usr.Id = id // make sure the id is consistent
 
-	u.storage.UpdateUser(usr)
+	u.storage.UpdateUser(*usr)
 	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(usr)
 }
 
 func (u *UserResource) removeUser(request *restful.Request, response *restful.Response) {
-	id, success := u.checkUserId(request, response)
-	if !success {
-		return
-	}
+	id := bson.ObjectIdHex(request.PathParameter("user_id"))
 
 	usr := u.storage.DeleteUser(id)
 	response.WriteHeader(http.StatusAccepted)
@@ -117,48 +129,9 @@ func (u *UserResource) removeUser(request *restful.Request, response *restful.Re
 }
 
 func (u *UserResource) getActiveOffers(request *restful.Request, response *restful.Response) {
-	id, success := u.checkUserId(request, response)
-	if !success {
-		return
-	}
+	id := bson.ObjectIdHex(request.PathParameter("user_id"))
 	items := u.itemStorage.GetItemsByOffer(id)
 
 	response.WriteHeader(http.StatusAccepted)
 	response.WriteEntity(PresentWithOffer(*items, id))
-}
-
-//--------------------------------------------------------------------//
-// Utility Functions
-
-func (u *UserResource) checkUserId(request *restful.Request, response *restful.Response) (bson.ObjectId, bool) {
-	success := true
-	idString := request.PathParameter("user_id")
-
-	if !bson.IsObjectIdHex(idString) {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusNotFound, "Malformed user_id.")
-		return bson.NewObjectId(), false
-	} else if !u.storage.ExistsUser(bson.ObjectIdHex(idString)) {
-		success = false
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusBadRequest, "User not found.")
-	}
-	id := bson.ObjectIdHex(idString)
-
-	return id, success
-}
-
-func (u *UserResource) checkUser(request *restful.Request, response *restful.Response) (User, bool) {
-	success := true
-
-	usr := new(User)
-	err := request.ReadEntity(usr)
-
-	if err != nil {
-		success = false
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusNotFound, "Malformed user.")
-	}
-
-	return *usr, success
 }

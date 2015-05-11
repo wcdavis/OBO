@@ -1,2 +1,5 @@
 conf.json
 OBOBackend
+private.pem
+public.pem
+private.new.pem
