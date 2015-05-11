@@ -8,18 +8,23 @@ import (
 
 // eventually plug into mongodb
 type ItemStorage struct {
-	db  *mgo.Database   // straight from mongo
-	col *mgo.Collection // collection right from mongo
+	db    *mgo.Database   // straight from mongo
+	col   *mgo.Collection // collection right from mongo
+	scope float64
 }
 
 func NewItemStorage(db *mgo.Database) *ItemStorage {
 	is := new(ItemStorage)
 	is.db = db
 	is.col = db.C("item")
+	is.scope = 2000.0
 
-	index := mgo.Index{Key: []string{"$2dsphere:location"}}
+	locIndex := mgo.Index{Key: []string{"$2dsphere:location"}}
+	//textIndex := mgo.Index{Key: []string{"$text:title", "$text:description"}}
 
-	util.Logerr(is.col.EnsureIndex(index))
+	util.Logerr(is.col.EnsureIndex(locIndex))
+	//util.Logerr(is.col.EnsureIndex(textIndex))
+	util.Logerr(is.col.EnsureIndexKey("title", "description"))
 	return is
 }
 
@@ -42,7 +47,6 @@ func (is *ItemStorage) GetItemsByUserId(user_id bson.ObjectId) *[]Item {
 }
 
 func (is *ItemStorage) GetFeed(long float64, lat float64, num int) *[]Item {
-	scope := 1000
 	result := []Item{}
 	err := is.col.Find(bson.M{
 		"location": bson.M{
@@ -51,10 +55,25 @@ func (is *ItemStorage) GetFeed(long float64, lat float64, num int) *[]Item {
 					"type":        "Point",
 					"coordinates": []float64{long, lat},
 				},
-				"$maxDistance": scope,
+				"$maxDistance": is.scope,
 			},
 		},
 	}).Sort("-_id").Limit(num).All(&result)
+	util.Logerr(err)
+	return &result
+}
+
+func (is *ItemStorage) SearchItems(search string, long float64, lat float64, num int) *[]Item {
+	result := []Item{}
+	err := is.col.Find(bson.M{
+		"location": bson.M{
+			"$geoWithin": bson.M{
+				"$centerSphere": []interface{}{[]float64{long, lat}, is.scope / 6378100.0},
+			},
+		},
+
+		"$text": bson.M{"$search": search},
+	}).Limit(num).All(&result)
 	util.Logerr(err)
 	return &result
 }
