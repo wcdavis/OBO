@@ -24,7 +24,7 @@ func NewItemStorage(db *mgo.Database) *ItemStorage {
 
 	util.Logerr(is.col.EnsureIndex(locIndex))
 	//util.Logerr(is.col.EnsureIndex(textIndex))
-	util.Logerr(is.col.EnsureIndexKey("title", "description"))
+	util.Logerr(is.col.EnsureIndexKey("title"))
 	return is
 }
 
