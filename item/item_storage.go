@@ -20,11 +20,11 @@ func NewItemStorage(db *mgo.Database) *ItemStorage {
 	is.scope = 2000.0
 
 	locIndex := mgo.Index{Key: []string{"$2dsphere:location"}}
-	//textIndex := mgo.Index{Key: []string{"$text:title", "$text:description"}}
+	textIndex := mgo.Index{Key: []string{"$text:title"}}
 
 	util.Logerr(is.col.EnsureIndex(locIndex))
-	//util.Logerr(is.col.EnsureIndex(textIndex))
-	util.Logerr(is.col.EnsureIndexKey("title"))
+	util.Logerr(is.col.EnsureIndex(textIndex))
+	//util.Logerr(is.col.EnsureIndexKey("title"))
 	return is
 }
 
