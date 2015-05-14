@@ -147,7 +147,7 @@ func (i *UserItemResource) updateItem(request *restful.Request, response *restfu
 
 	item.Id = id // make sure the id is consistent
 	storedItem := i.storage.GetItem(id)
-	if storedItem.Id != uid {
+	if storedItem.User_Id != uid {
 		response.WriteErrorString(http.StatusNotFound, "You don't own this item")
 		return
 	}
